@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>PDF 병합/분할</title>
+		<style>
+			body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; margin: 24px; }
+			.container { max-width: 860px; margin: 0 auto; }
+			.card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+			h2 { margin: 0 0 12px; font-size: 20px; }
+			.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+			label { font-weight: 600; }
+			input[type="text"] { padding: 6px 10px; }
+			input[type="file"] { padding: 6px 0; }
+			button { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+			button:hover { background: #1d4ed8; }
+			.help { color: #555; font-size: 12px; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>PDF 병합/분할</h1>
+			<p class="help">간단한 웹 UI로 PDF를 병합하거나 분할합니다.</p>
+
+			<div class="card">
+				<h2>병합</h2>
+				<form action="/merge" method="post" enctype="multipart/form-data">
+					<div class="row">
+						<label for="merge-files">PDF 파일들</label>
+						<input id="merge-files" type="file" name="files" accept="application/pdf,.pdf" multiple required />
+					</div>
+					<div class="row">
+						<label for="merge-name">출력 파일명</label>
+						<input id="merge-name" type="text" name="output_name" placeholder="merged.pdf" />
+					</div>
+					<div class="row">
+						<button type="submit">병합 실행</button>
+					</div>
+					<p class="help">2개 이상의 PDF를 선택하세요.</p>
+				</form>
+			</div>
+
+			<div class="card">
+				<h2>분할</h2>
+				<form action="/split" method="post" enctype="multipart/form-data">
+					<div class="row">
+						<label for="split-file">PDF 파일</label>
+						<input id="split-file" type="file" name="file" accept="application/pdf,.pdf" required />
+					</div>
+					<div class="row">
+						<label for="split-ranges">범위(선택)</label>
+						<input id="split-ranges" type="text" name="ranges" placeholder="예: 1-3,5,7-" />
+					</div>
+					<div class="row">
+						<button type="submit">분할 실행</button>
+					</div>
+					<p class="help">범위를 비우면 각 페이지를 개별 PDF로 생성합니다.</p>
+				</form>
+			</div>
+		</div>
+	</body>
+</html>
