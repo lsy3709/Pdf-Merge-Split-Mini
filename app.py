@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from urllib.parse import quote as url_quote
 from pathlib import Path
 from typing import List, Optional
 
@@ -15,6 +16,20 @@ from pdf_tool.utils import parse_ranges_to_groups
 app = FastAPI(title="PDF 병합/분할 웹")
 
 templates = Jinja2Templates(directory="templates")
+
+
+def build_content_disposition(filename: str) -> str:
+	"""다운로드 파일명을 위한 Content-Disposition 생성 (RFC 5987 지원).
+
+	- ASCII fallback + filename* (UTF-8) 동시 제공
+	- 따옴표/세미콜론 등 문제 문자는 밑줄로 치환
+	"""
+	fallback = "".join(
+		ch if (0x20 <= ord(ch) < 0x7F and ch not in {'\\', '"', ';'}) else "_"
+		for ch in filename
+	)
+	utf8_star = url_quote(filename, safe="")
+	return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{utf8_star}"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -70,6 +85,7 @@ async def merge_endpoint(
 	if not safe_name.lower().endswith(".pdf"):
 		safe_name += ".pdf"
 
+
 	out_buf = BytesIO()
 	writer.write(out_buf)
 	out_buf.seek(0)
@@ -78,7 +94,7 @@ async def merge_endpoint(
 		out_buf,
 		media_type="application/pdf",
 		headers={
-			"Content-Disposition": f"attachment; filename=\"{safe_name}\""
+			"Content-Disposition": build_content_disposition(safe_name)
 		},
 	)
 
@@ -148,7 +164,7 @@ async def split_endpoint(
 		return StreamingResponse(
 			BytesIO(data_bytes),
 			media_type="application/pdf",
-			headers={"Content-Disposition": f"attachment; filename=\"{name}\""},
+			headers={"Content-Disposition": build_content_disposition(name)},
 		)
 
 	zip_buf = BytesIO()
@@ -161,7 +177,7 @@ async def split_endpoint(
 	return StreamingResponse(
 		zip_buf,
 		media_type="application/zip",
-		headers={"Content-Disposition": f"attachment; filename=\"{zip_name}\""},
+		headers={"Content-Disposition": build_content_disposition(zip_name)},
 	)
 
 
