@@ -4,6 +4,8 @@ from io import BytesIO
 from urllib.parse import quote as url_quote
 from pathlib import Path
 from typing import List, Optional
+import os
+import threading
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -97,6 +99,20 @@ async def merge_endpoint(
 			"Content-Disposition": build_content_disposition(safe_name)
 		},
 	)
+
+
+@app.post("/admin/shutdown")
+async def admin_shutdown(token: str = Form(...)):
+	"""서버를 안전하게 종료합니다(개발용). 토큰이 일치해야 합니다.
+
+	- 기본 토큰: "localdev". 운영 시 환경변수 ADMIN_TOKEN으로 변경하세요.
+	"""
+	admin_token = os.environ.get("ADMIN_TOKEN", "localdev")
+	if token != admin_token:
+		raise HTTPException(status_code=403, detail="유효하지 않은 토큰입니다.")
+	# 응답을 보낸 뒤 프로세스를 종료합니다.
+	threading.Timer(0.5, lambda: os._exit(0)).start()
+	return {"ok": True, "message": "서버 종료를 요청했습니다."}
 
 
 @app.post("/split")
