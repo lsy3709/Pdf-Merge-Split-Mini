@@ -19,12 +19,14 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+	"""간단한 업로드 UI를 렌더링합니다."""
 	# 간단한 업로드 UI 렌더링
 	return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/health")
 async def health():
+	"""헬스 체크 엔드포인트."""
 	return {"status": "ok"}
 
 
@@ -33,6 +35,12 @@ async def merge_endpoint(
 	files: List[UploadFile] = File(..., description="병합할 PDF 파일들 (2개 이상)"),
 	output_name: str = Form(default="merged.pdf"),
 ):
+	"""여러 PDF 파일을 병합하여 하나의 PDF로 스트리밍 반환합니다.
+
+	- 파일 수가 2개 이상이어야 합니다.
+	- 암호화된 PDF는 거부됩니다.
+	- `output_name`은 비어 있으면 기본값으로 대체되며 확장자가 없으면 `.pdf`를 붙입니다.
+	"""
 	# 입력 검증: 최소 2개 파일
 	if files is None or len(files) < 2:
 		raise HTTPException(status_code=400, detail="병합에는 최소 2개의 PDF가 필요합니다.")
@@ -80,6 +88,12 @@ async def split_endpoint(
 	file: UploadFile = File(..., description="분할할 PDF 파일"),
 	ranges: Optional[str] = Form(default=None, description="예: 1-3,5,7-"),
 ):
+	"""PDF를 페이지별 또는 범위별로 분할하여 PDF/ZIP으로 반환합니다.
+
+	- `ranges`가 비어 있으면 각 페이지를 개별 PDF로 생성합니다.
+	- `ranges`가 지정되면 각 토큰별 그룹으로 파일을 생성합니다.
+	- 암호화된 PDF는 거부됩니다.
+	"""
 	# 입력 파일 검증
 	if not file.filename or not file.filename.lower().endswith(".pdf"):
 		raise HTTPException(status_code=400, detail=f"PDF 파일만 업로드하세요: {file.filename}")
@@ -126,7 +140,8 @@ async def split_endpoint(
 
 	# 응답: 1개면 PDF 그대로, 여러 개면 ZIP
 	if len(outputs) == 0:
-		raise HTTPException(status_code=500, detail="생성된 파일이 없습니다.")
+		# 요청이 유효하나 결과가 비어있는 경우 400으로 응답
+		raise HTTPException(status_code=400, detail="생성된 파일이 없습니다. 범위를 확인하세요.")
 
 	if len(outputs) == 1:
 		name, data_bytes = outputs[0]
@@ -148,3 +163,15 @@ async def split_endpoint(
 		media_type="application/zip",
 		headers={"Content-Disposition": f"attachment; filename=\"{zip_name}\""},
 	)
+
+
+if __name__ == "__main__":
+	"""개발 편의를 위한 직접 실행 엔트리.
+
+	- 현재 파이썬 해석기에서 uvicorn을 사용해 서버를 기동합니다.
+	- 문자열 경로 대신 앱 객체를 직접 전달해 재-import 이슈를 회피합니다.
+	- 윈도우에서 reloader로 인한 해석기 차이 문제를 피하기 위해 reload=False.
+	"""
+	import uvicorn
+
+	uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
